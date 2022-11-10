@@ -20,6 +20,9 @@ atollrim <- st_convex_hull(land)
 atollrim <- st_transform(atollrim, st_crs("+proj=laea +lon_0=73.2"))
 atollrim <- st_buffer(atollrim, dist = 10*1000)
 
+#Save unprojected version of eez
+save(eez, file = 'output/data/maldives_eez_notprojected.Rdata')
+
 #Will want to measure transshipping outside of atoll rim, so subtract atoll rim from EEZ
 #Give same projection
 eez <- st_transform(eez, st_crs("+proj=laea +lon_0=73.2"))
@@ -30,6 +33,6 @@ atollrim <- st_difference(eez, atollrim)
 land <- st_transform(land, st_crs("+proj=laea +lon_0=73.2"))
 
 #Save all three objects
-save(land, file = 'output/data/maldives_land.Rdata')
-save(eez, file = 'output/data/maldives_eez.Rdata')
-save(atollrim, file = 'output/data/maldives_atollrim.Rdata')
+save(land, file = 'output/data/maldives_land_projected.Rdata')
+save(eez, file = 'output/data/maldives_eez_projected.Rdata')
+save(atollrim, file = 'output/data/maldives_atollrim_projected.Rdata')
