@@ -172,8 +172,6 @@ fishing_p01_list <- future_map(flist, function(x){
   try(single_date_p01(x))
 })
 
-save(fishing_p01_list, file = 'output/data/fishing_p01_list.Rdata')
-
 #Bind rows
 fishing_p01_df <- bind_rows(fishing_p01_list)
 
@@ -184,3 +182,16 @@ flag_gear_year_df <- mutate(fishing_p01_df, year = year(date)) %>%
   ungroup()
 
 save(flag_gear_year_df, file = 'output/data/flag_gear_year_df.Rdata')
+
+
+#Identify domestic vessels that fish inside Maldivian waters
+domves <- filter(fishing_p1_df, flag_gfw == "MDV") %>% distinct(mmsi) %>% as.matrix() %>% as.character()
+
+filter(vesselinfo, mmsi %in% domves)
+
+#look up names on marine traffic:
+#455364000 is LEYHNU 609
+#455365000 is LU 703
+#455388000 is BAHARI NUSANTARA 3
+
+filter(fishing_p1_df, mmsi %in% domves) %>% as.data.frame()
