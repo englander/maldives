@@ -110,7 +110,8 @@ yeardf$`Fishing hours` <- formNum(yeardf$`Fishing hours`, 0)
 (yeartab <- flextable(yeardf) %>% 
     theme_booktabs() %>%
   set_caption(caption = "Table 1: Foreign fishing by year") %>% 
-    align(align = "center", part = "all") 
+    align(align = "center", part = "all") %>% 
+    autofit()
 )
 
 save_as_docx(yeartab, path = 'output/tables/foreign_year.docx')
@@ -162,7 +163,8 @@ geardf$`Fishing hours` <- formNum(geardf$`Fishing hours`, 0)
 (geartab <- flextable(geardf) %>% 
     theme_booktabs() %>%
     set_caption(caption = "Table 2: Foreign fishing by gear") %>% 
-    align(align = "center", part = "all")
+    align(align = "center", part = "all") %>% 
+    autofit()
 )
 
 save_as_docx(geartab, path = 'output/tables/foreign_gear.docx')
@@ -177,44 +179,44 @@ flagdf <- left_join(
     ungroup() %>% 
     arrange(desc(fishing_hours)),
   filter(fishing_p1_df, flag_gfw != "MDV") %>% 
-    group_by(vessel_class_gfw) %>% 
+    group_by(flag_gfw) %>% 
     summarise(fishing_kw_hours = sum(fishing_kw_hours)) %>% 
     ungroup() %>% 
-    rename(flag = vessel_class_gfw), 
+    rename(flag = flag_gfw), 
   by = 'flag') %>% 
   left_join(
     filter(fishing_p1_df, flag_gfw != "MDV") %>% 
-      distinct(vessel_class_gfw, mmsi) %>% 
-      group_by(vessel_class_gfw) %>% 
+      distinct(flag_gfw, mmsi) %>% 
+      group_by(flag_gfw) %>% 
       count() %>% 
-      rename(flag = vessel_class_gfw), 
+      rename(flag = flag_gfw), 
     by = 'flag'
   ) %>% 
-  dplyr::select(flag, fishing_kw_hours, fishing_hours, n)
-
-#pole and line fishing hours = 0, but not fishing kw hours and n
-#probably due to difference in resolution. Since fishing hours higher res, set 
-#fishing kw hours and n = 0 (that fishing probably occurred outside EEZ)
-flagdf$fishing_kw_hours[flagdf$flag == 'pole_and_line'] <- 0
-flagdf$n[flagdf$flag == 'pole_and_line'] <- 0
+  dplyr::select(flag, fishing_kw_hours, fishing_hours, n) %>% 
+  filter(fishing_hours != 0)
 
 #Arrange by fishing kw hours
 flagdf <- arrange(flagdf, desc(fishing_kw_hours))
 
-flagdf <- mutate(flagdf, flag = str_replace_all(flag, "_", " ") %>% 
-                   str_to_sentence())
+#Replace iso3 code with countryname
+flagdf$flag <- countrycode(flagdf$flag, origin = 'iso3c', destination = 'country.name')
 
-names(flagdf) <- c("flag", "Fishing-kW hours", "Fishing hours", "Fishing vessels")
+names(flagdf) <- c("Flag", "Fishing-kW hours", "Fishing hours", "Fishing vessels")
 
 flagdf[is.na(flagdf)] <- 0
 
 flagdf$`Fishing-kW hours` <- formNum(flagdf$`Fishing-kW hours`, 0)
 flagdf$`Fishing hours` <- formNum(flagdf$`Fishing hours`, 0)
 
+#Drop Spain because its 0.268 fishing hours get rounded down to 0, and 
+#has 0 for other two columns
+flagdf <- filter(flagdf, Flag != "Spain")
+
 (flagtab <- flextable(flagdf) %>% 
     theme_booktabs() %>%
     set_caption(caption = "Table 3: Foreign fishing by flag") %>% 
-    align(align = "center", part = "all")
+    align(align = "center", part = "all") %>% 
+    autofit()
 )
 
 save_as_docx(flagtab, path = 'output/tables/foreign_flag.docx')
