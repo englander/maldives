@@ -103,7 +103,7 @@ names(yeardf) <- c("Year", "Loitering events")
 
 (yeartab <- flextable(yeardf) %>% 
     theme_booktabs() %>%
-    set_caption(caption = "Table 7: Loitering events by year") %>% 
+    set_caption(caption = "Table 9: Loitering events by year") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 5, j = 1:2) %>% 
     autofit()
@@ -136,7 +136,7 @@ names(flagdf) <- c("Flag", "Loitering events")
 
 (flagtab <- flextable(flagdf) %>% 
     theme_booktabs() %>%
-    set_caption(caption = "Table 8: Loitering events by flag") %>% 
+    set_caption(caption = "Table 10: Loitering events by flag") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 7, j = 1:2) %>% 
     autofit()

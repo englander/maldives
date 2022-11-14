@@ -154,7 +154,7 @@ yeardf$`Hours lost` <- paste0(formNum(yeardf$`Hours lost`, 1), "%")
 
 (yeartab <- flextable(yeardf) %>% 
     theme_booktabs() %>%
-    set_caption(caption = "Table 4: Suspected disabling events by year") %>% 
+    set_caption(caption = "Table 6: Suspected disabling events by year") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 3, j = 1:4) %>% 
     autofit()
@@ -206,7 +206,7 @@ geardf$`Hours lost`[geardf$`Hours lost` == "NaN"] <- ""
 
 (geartab <- flextable(geardf) %>% 
     theme_booktabs() %>%
-    set_caption(caption = "Table 5: Suspected disabling events by gear") %>% 
+    set_caption(caption = "Table 7: Suspected disabling events by gear") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 10, j = 1:4) %>% 
     autofit()
@@ -264,7 +264,7 @@ flagdf$Flag[is.na(flagdf$Flag)] <- "Missing"
 
 (flagtab <- flextable(flagdf) %>% 
     theme_booktabs() %>%
-    set_caption(caption = "Table 6: Suspected disabling events by flag") %>% 
+    set_caption(caption = "Table 8: Suspected disabling events by flag") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 6, j = 1:4) %>% 
     autofit()
