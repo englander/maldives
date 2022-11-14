@@ -2,7 +2,8 @@
 rm(list = ls())
 
 pacman::p_load('dplyr', 'lubridate', 'ggplot2', 'sf', 
-               'countrycode', 'tidyr', 'viridis', 'flextable')
+               'countrycode', 'tidyr', 'viridis', 'flextable', 
+               'stringr')
 
 myThemeStuff <- 
   theme(panel.background = element_rect(fill=NA),
@@ -117,3 +118,103 @@ save_as_docx(yeartab, path = 'output/tables/foreign_year.docx')
 
 
 ## Table by gear
+geardf <- left_join(
+  filter(flag_gear_year_df, flag != "MDV") %>% 
+    group_by(gear) %>% 
+    summarise(fishing_hours = sum(fishing_hours)) %>% 
+    ungroup() %>% 
+    arrange(desc(fishing_hours)),
+  filter(fishing_p1_df, flag_gfw != "MDV") %>% 
+    group_by(vessel_class_gfw) %>% 
+    summarise(fishing_kw_hours = sum(fishing_kw_hours)) %>% 
+    ungroup() %>% 
+    rename(gear = vessel_class_gfw), 
+  by = 'gear') %>% 
+  left_join(
+    filter(fishing_p1_df, flag_gfw != "MDV") %>% 
+      distinct(vessel_class_gfw, mmsi) %>% 
+      group_by(vessel_class_gfw) %>% 
+      count() %>% 
+      rename(gear = vessel_class_gfw), 
+    by = 'gear'
+  ) %>% 
+  dplyr::select(gear, fishing_kw_hours, fishing_hours, n)
+
+#pole and line fishing hours = 0, but not fishing kw hours and n
+#probably due to difference in resolution. Since fishing hours higher res, set 
+#fishing kw hours and n = 0 (that fishing probably occurred outside EEZ)
+geardf$fishing_kw_hours[geardf$gear == 'pole_and_line'] <- 0
+geardf$n[geardf$gear == 'pole_and_line'] <- 0
+
+#Arrange by fishing kw hours
+geardf <- arrange(geardf, desc(fishing_kw_hours))
+
+geardf <- mutate(geardf, gear = str_replace_all(gear, "_", " ") %>% 
+                   str_to_sentence())
+
+names(geardf) <- c("Gear", "Fishing-kW hours", "Fishing hours", "Fishing vessels")
+
+geardf[is.na(geardf)] <- 0
+
+geardf$`Fishing-kW hours` <- formNum(geardf$`Fishing-kW hours`, 0)
+geardf$`Fishing hours` <- formNum(geardf$`Fishing hours`, 0)
+
+(geartab <- flextable(geardf) %>% 
+    theme_booktabs() %>%
+    set_caption(caption = "Table 2: Foreign fishing by gear") %>% 
+    align(align = "center", part = "all")
+)
+
+save_as_docx(geartab, path = 'output/tables/foreign_gear.docx')
+
+
+
+##Table by flag
+flagdf <- left_join(
+  filter(flag_gear_year_df, flag != "MDV") %>% 
+    group_by(flag) %>% 
+    summarise(fishing_hours = sum(fishing_hours)) %>% 
+    ungroup() %>% 
+    arrange(desc(fishing_hours)),
+  filter(fishing_p1_df, flag_gfw != "MDV") %>% 
+    group_by(vessel_class_gfw) %>% 
+    summarise(fishing_kw_hours = sum(fishing_kw_hours)) %>% 
+    ungroup() %>% 
+    rename(flag = vessel_class_gfw), 
+  by = 'flag') %>% 
+  left_join(
+    filter(fishing_p1_df, flag_gfw != "MDV") %>% 
+      distinct(vessel_class_gfw, mmsi) %>% 
+      group_by(vessel_class_gfw) %>% 
+      count() %>% 
+      rename(flag = vessel_class_gfw), 
+    by = 'flag'
+  ) %>% 
+  dplyr::select(flag, fishing_kw_hours, fishing_hours, n)
+
+#pole and line fishing hours = 0, but not fishing kw hours and n
+#probably due to difference in resolution. Since fishing hours higher res, set 
+#fishing kw hours and n = 0 (that fishing probably occurred outside EEZ)
+flagdf$fishing_kw_hours[flagdf$flag == 'pole_and_line'] <- 0
+flagdf$n[flagdf$flag == 'pole_and_line'] <- 0
+
+#Arrange by fishing kw hours
+flagdf <- arrange(flagdf, desc(fishing_kw_hours))
+
+flagdf <- mutate(flagdf, flag = str_replace_all(flag, "_", " ") %>% 
+                   str_to_sentence())
+
+names(flagdf) <- c("flag", "Fishing-kW hours", "Fishing hours", "Fishing vessels")
+
+flagdf[is.na(flagdf)] <- 0
+
+flagdf$`Fishing-kW hours` <- formNum(flagdf$`Fishing-kW hours`, 0)
+flagdf$`Fishing hours` <- formNum(flagdf$`Fishing hours`, 0)
+
+(flagtab <- flextable(flagdf) %>% 
+    theme_booktabs() %>%
+    set_caption(caption = "Table 3: Foreign fishing by flag") %>% 
+    align(align = "center", part = "all")
+)
+
+save_as_docx(flagtab, path = 'output/tables/foreign_flag.docx')
