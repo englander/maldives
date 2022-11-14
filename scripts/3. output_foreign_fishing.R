@@ -69,7 +69,7 @@ plotdf <- filter(fishing_p1_df, flag_gfw != "MDV") %>%
   scale_fill_viridis("Fishing-kW\nhours",trans='log', 
                       breaks = c(50, 1000, 20000), labels = c("50", "1,000", "20,000")) + 
   xlab("") + ylab("") + 
-    ggtitle("Foreign fishing-kW hours, 2016-2020")
+    ggtitle("Apparent foreign fishing, 2016-2020")
 )
 
 ggsave(foreignplot, filename = 'output/figures/foreign_fishingkwhours.png', 
@@ -115,7 +115,7 @@ yeardf$`Fishing hours` <- formNum(yeardf$`Fishing hours`, 0)
 
 (yeartab <- flextable(yeardf) %>% 
     theme_booktabs() %>%
-  set_caption(caption = "Table 1: Foreign fishing by year") %>% 
+  set_caption(caption = "Table 1: Apparent foreign fishing by year") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 5, j = 1:4) %>%
     autofit()
@@ -176,7 +176,7 @@ geardf$`Fishing hours` <- formNum(geardf$`Fishing hours`, 0)
 
 (geartab <- flextable(geardf) %>% 
     theme_booktabs() %>%
-    set_caption(caption = "Table 2: Foreign fishing by gear") %>% 
+    set_caption(caption = "Table 2: Apparent foreign fishing by gear") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 11, j = 1:4) %>% 
     autofit()
@@ -234,7 +234,7 @@ flagdf$`Fishing-kW hours`[flagdf$Flag == "Spain"] <- ""
 
 (flagtab <- flextable(flagdf) %>% 
     theme_booktabs() %>%
-    set_caption(caption = "Table 3: Foreign fishing by flag") %>% 
+    set_caption(caption = "Table 3: Apparent foreign fishing by flag") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 6, j = 1:4) %>% 
     autofit()
