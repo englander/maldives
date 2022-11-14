@@ -96,13 +96,19 @@ yeardf <- left_join(
       count(), 
     by = 'year'
   ) %>% 
-  dplyr::select(year, fishing_kw_hours, fishing_hours, n)
+  dplyr::select(year, fishing_kw_hours, fishing_hours, n) %>% 
+  mutate(year = as.character(year))
+
+yeardf <- bind_rows(yeardf, 
+                    data.frame(year = "Total", fishing_hours = sum(flag_gear_year_df$fishing_hours[flag_gear_year_df$flag != "MDV"]),
+                               fishing_kw_hours = sum(fishing_p1_df$fishing_kw_hours[fishing_p1_df$flag_gfw != "MDV"]),
+                               n = unique(fishing_p1_df$mmsi[fishing_p1_df$flag_gfw != "MDV"]) %>% length()))
+
+
   
 names(yeardf) <- c("Year", "Fishing-kW hours", "Fishing hours", "Fishing vessels")
 
 yeardf[is.na(yeardf)] <- 0
-
-yeardf <- mutate(yeardf, Year = as.character(Year))
 
 yeardf$`Fishing-kW hours` <- formNum(yeardf$`Fishing-kW hours`, 0)
 yeardf$`Fishing hours` <- formNum(yeardf$`Fishing hours`, 0)
@@ -111,6 +117,7 @@ yeardf$`Fishing hours` <- formNum(yeardf$`Fishing hours`, 0)
     theme_booktabs() %>%
   set_caption(caption = "Table 1: Foreign fishing by year") %>% 
     align(align = "center", part = "all") %>% 
+    flextable::hline(i = 5, j = 1:4) %>%
     autofit()
 )
 
@@ -147,11 +154,18 @@ geardf <- left_join(
 geardf$fishing_kw_hours[geardf$gear == 'pole_and_line'] <- 0
 geardf$n[geardf$gear == 'pole_and_line'] <- 0
 
+geardf <- mutate(geardf, gear = str_replace_all(gear, "_", " ") %>% 
+                   str_to_sentence())
+
 #Arrange by fishing kw hours
 geardf <- arrange(geardf, desc(fishing_kw_hours))
 
-geardf <- mutate(geardf, gear = str_replace_all(gear, "_", " ") %>% 
-                   str_to_sentence())
+geardf <- bind_rows(geardf, 
+                    data.frame(gear = "Total", fishing_hours = sum(flag_gear_year_df$fishing_hours[flag_gear_year_df$flag != "MDV"]),
+                               fishing_kw_hours = sum(fishing_p1_df$fishing_kw_hours[fishing_p1_df$flag_gfw != "MDV"]),
+                               n = unique(fishing_p1_df$mmsi[fishing_p1_df$flag_gfw != "MDV"]) %>% length()))
+
+
 
 names(geardf) <- c("Gear", "Fishing-kW hours", "Fishing hours", "Fishing vessels")
 
@@ -164,6 +178,7 @@ geardf$`Fishing hours` <- formNum(geardf$`Fishing hours`, 0)
     theme_booktabs() %>%
     set_caption(caption = "Table 2: Foreign fishing by gear") %>% 
     align(align = "center", part = "all") %>% 
+    flextable::hline(i = 11, j = 1:4) %>% 
     autofit()
 )
 
@@ -195,27 +210,33 @@ flagdf <- left_join(
   dplyr::select(flag, fishing_kw_hours, fishing_hours, n) %>% 
   filter(fishing_hours != 0)
 
+#.268 hours of Spanish fishing likely just from one vessel; that vessel must have been missing
+#identifying information so it was excluded from .1 degree level data
+flagdf$n[flagdf$flag == "ESP"] <- 1
+
 #Arrange by fishing kw hours
 flagdf <- arrange(flagdf, desc(fishing_kw_hours))
 
 #Replace iso3 code with countryname
 flagdf$flag <- countrycode(flagdf$flag, origin = 'iso3c', destination = 'country.name')
 
-names(flagdf) <- c("Flag", "Fishing-kW hours", "Fishing hours", "Fishing vessels")
+flagdf <- bind_rows(flagdf, 
+                    data.frame(flag = "Total", fishing_hours = sum(flag_gear_year_df$fishing_hours[flag_gear_year_df$flag != "MDV"]),
+                               fishing_kw_hours = sum(fishing_p1_df$fishing_kw_hours[fishing_p1_df$flag_gfw != "MDV"]),
+                               n = unique(fishing_p1_df$mmsi[fishing_p1_df$flag_gfw != "MDV" & fishing_p1_df$fishing_kw_hours > 0]) %>% length()))
 
-flagdf[is.na(flagdf)] <- 0
+names(flagdf) <- c("Flag", "Fishing-kW hours", "Fishing hours", "Fishing vessels")
 
 flagdf$`Fishing-kW hours` <- formNum(flagdf$`Fishing-kW hours`, 0)
 flagdf$`Fishing hours` <- formNum(flagdf$`Fishing hours`, 0)
 
-#Drop Spain because its 0.268 fishing hours get rounded down to 0, and 
-#has 0 for other two columns
-flagdf <- filter(flagdf, Flag != "Spain")
+flagdf$`Fishing-kW hours`[flagdf$Flag == "Spain"] <- ""
 
 (flagtab <- flextable(flagdf) %>% 
     theme_booktabs() %>%
     set_caption(caption = "Table 3: Foreign fishing by flag") %>% 
     align(align = "center", part = "all") %>% 
+    flextable::hline(i = 6, j = 1:4) %>% 
     autofit()
 )
 
