@@ -13,6 +13,39 @@ myThemeStuff <-
         legend.title = element_text(color = "black", size = 11, family="sans")
   )
 
+set_flextable_defaults(font.family = "Calibri (Body)", 
+                       font.size = "12", 
+                       text.align = 'left')
+
+formNum <- function(num, dig){
+  
+  #Round
+  roundnum <- round(num, dig) %>% as.character()
+  
+  #If rounded to integer, need to add "." to end
+  if(length(grep("\\.",roundnum))==0){
+    roundnum <- paste0(roundnum, ".")
+  }
+  
+  #Add an extra zero beyond the decimal point if needed to get same length
+  #Do num first
+  roundnum <- sapply(seq_len(length(roundnum)), function(x){
+    if(gsub(".*\\.","",roundnum[x]) %>% nchar() < dig){
+      #Needed length
+      zerosneeded <- dig - gsub(".*\\.","",roundnum[x]) %>% nchar()
+      roundnum[x] <- paste0(roundnum[x],paste0(rep(0,zerosneeded),collapse=""))
+    } else{
+      roundnum[x]
+    }
+  })
+  
+  #Add commas if necessary
+  roundnum <- prettyNum(roundnum, ",")
+  
+  return(roundnum)
+}
+
+
 #Created in 1. read_shapes.R
 load("output/data/maldives_eez_notprojected.Rdata")
 load('output/data/maldives_land_projected.Rdata')
@@ -41,3 +74,41 @@ plotdf <- filter(fishing_p1_df, flag_gfw != "MDV") %>%
 
 ggsave(foreignplot, filename = 'output/figures/foreign_fishingkwhours.png', 
        height = 4, width = 4, dpi = 900, units = 'in')
+
+
+##Table: year, fishing-kw hours, fishing hours, fishing vessels
+yeardf <- left_join(
+  filter(flag_gear_year_df, flag != "MDV") %>% 
+    group_by(year) %>% 
+    summarise(fishing_hours = sum(fishing_hours)) %>% 
+    ungroup(),
+  filter(fishing_p1_df, flag_gfw != "MDV") %>% 
+  mutate(year = year(date)) %>% 
+  group_by(year) %>% 
+  summarise(fishing_kw_hours = sum(fishing_kw_hours)) %>% 
+  ungroup(), 
+  by = 'year') %>% 
+  left_join(
+    filter(fishing_p1_df, flag_gfw != "MDV") %>% 
+      mutate(year = year(date)) %>% 
+      distinct(year, mmsi) %>% 
+      group_by(year) %>% 
+      count(), 
+    by = 'year'
+  ) %>% 
+  dplyr::select(year, fishing_kw_hours, fishing_hours, n)
+  
+names(yeardf) <- c("Year", "Fishing-kW hours", "Fishing hours", "Fishing vessels")
+
+yeardf[is.na(yeardf)] <- 0
+
+yeardf <- mutate(yeardf, Year = as.character(Year))
+
+yeardf$`Fishing-kW hours` <- formNum(yeardf$`Fishing-kW hours`, 0)
+yeardf$`Fishing hours` <- formNum(yeardf$`Fishing hours`, 0)
+
+(yeartab <- flextable(yeardf) %>% 
+  set_caption(caption = "Table 1: Foreign fishing by year")
+)
+
+save_as_docx(yeartab, path = 'output/data/foreign_year.docx')
