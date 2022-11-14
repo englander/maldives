@@ -101,12 +101,12 @@ togdisab$type <- as.factor(togdisab$type)
 togdisab$type <- relevel(togdisab$type, ref = "Start")
 
 (disabplot <- ggplot() + 
-    geom_sf(data = eez, fill = NA, size = 0.25) + 
+    geom_sf(data = eez, fill = NA) + 
     geom_sf(data = land, fill = 'grey60', col = 'grey60') + 
   geom_sf(data = togdisab, aes(col = type), alpha = 0.35) + 
-  scale_color_manual("Disabling event", values = c("dodgerblue2", "darkorange1")) + 
+  scale_color_manual("Event", values = c("dodgerblue2", "darkorange1")) + 
   myThemeStuff + 
-  ggtitle("Disabling events within 25 km, 2017-2019"))
+  ggtitle("Suspected disabling events, 2017-2019"))
 
 ggsave(disabplot, filename = 'output/figures/disabling_events.png', 
        height = 4, width = 4, dpi = 900, units = 'in')
@@ -154,7 +154,7 @@ yeardf$`Hours lost` <- paste0(formNum(yeardf$`Hours lost`, 1), "%")
 
 (yeartab <- flextable(yeardf) %>% 
     theme_booktabs() %>%
-    set_caption(caption = "Table 4: Disabling events by year") %>% 
+    set_caption(caption = "Table 4: Suspected disabling events by year") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 3, j = 1:4) %>% 
     autofit()
@@ -206,7 +206,7 @@ geardf$`Hours lost`[geardf$`Hours lost` == "NaN"] <- ""
 
 (geartab <- flextable(geardf) %>% 
     theme_booktabs() %>%
-    set_caption(caption = "Table 5: Disabling events by gear") %>% 
+    set_caption(caption = "Table 5: Suspected disabling events by gear") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 10, j = 1:4) %>% 
     autofit()
@@ -264,7 +264,7 @@ flagdf$Flag[is.na(flagdf$Flag)] <- "Missing"
 
 (flagtab <- flextable(flagdf) %>% 
     theme_booktabs() %>%
-    set_caption(caption = "Table 6: Disabling events by flag") %>% 
+    set_caption(caption = "Table 6: Suspected disabling events by flag") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 6, j = 1:4) %>% 
     autofit()
