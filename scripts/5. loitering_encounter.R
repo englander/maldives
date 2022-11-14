@@ -1,5 +1,6 @@
 #Count number of loitering and encounter events within Maldives EEZ
 #There are no encounter events within 25 km of Maldives EEZ
+#There are no loitering events outside Maldives EEZ within 25 km
 rm(list = ls())
 
 pacman::p_load('dplyr', 'collapse', 'lubridate', 'ggplot2', 'sf', 'readr',
@@ -52,6 +53,7 @@ loit <- read_csv("data/loitering.csv")
 #Created in 1. read_shapes.R
 load("output/data/maldives_atollrim_projected.Rdata")
 load("output/data/maldives_eez_notprojected.Rdata")
+load('output/data/maldives_land_projected.Rdata')
 
 atollrim <- st_transform(atollrim, st_crs(eez))
 
@@ -61,54 +63,83 @@ loit <- st_multipoint(x = cbind(loit$lon, loit$lat)) %>%
   st_cast("POINT") %>% 
   st_sf(loit)
 
-#Projected EEZ so can create 25 km buffer. Created in 1. read_shapes.R
-load('output/data/maldives_eez_projected.Rdata')
+inter <- st_intersects(atollrim, loit)
 
-buf <- st_buffer(eez, dist = 25*1000)
+#loitering events outside atoll rim
+loit <- loit[inter[[1]], ]
 
-buf <- st_transform(buf, st_crs(loit))
+#Loitering events between 2016 and 2020
+loit <- mutate(loit, start = as.Date(start), end = as.Date(end)) %>% 
+  mutate(year = year(start)) %>% 
+  filter(year >= 2016 & year <= 2020)
 
-#Which gap events start outside of atoll rim, within 25 km EEZ?
-atollinter <- st_intersects(atollrim, loit)
-bufinter <- st_intersects(buf, loit)
-
-#loitering events both outside atoll rim and within 25 km of EEZ
-loit <- loit[base::intersect(atollinter[[1]], bufinter[[1]]), ]
-
-
-#Also plot locations of encounter events
-encounter <- read_csv("data/encounter.csv")
-
-encounter <- st_multipoint(x = cbind(encounter$lon, encounter$lat)) %>% 
-  st_sfc(crs = st_crs(buf)) %>% 
-  st_cast("POINT") %>% 
-  st_sf(encounter)
-
-#Which gap events end within 25 km of EEZ?
-atollinter <- st_intersects(atollrim, encounter)
-bufinter <- st_intersects(buf, encounter)
-base::intersect(atollinter[[1]], bufinter[[1]])
-
-#There are no encounter events within Maldives EEZ, so cannot plot
-
-encounter <- encounter[inter[[1]],]
-
-#Bind start and end disabling together so can make type color
-togdf <- bind_rows(
-  mutate(loit, type = "Start"),
-  mutate(encounter, type = "End")
-)
-
-togdisab$type <- as.factor(togdisab$type)
-togdisab$type <- relevel(togdisab$type, ref = "Start")
-
-(disabplot <- ggplot() + 
+(loitplot <- ggplot() + 
     geom_sf(data = eez, fill = NA, size = 0.25) + 
     geom_sf(data = land, fill = 'grey60', col = 'grey60') + 
-    geom_sf(data = togdisab, aes(col = type), alpha = 0.35) + 
-    scale_color_manual("Disabling event", values = c("dodgerblue2", "darkorange1")) + 
+    geom_sf(data = loit, col = 'darkorange1', alpha = 0.5) + 
     myThemeStuff + 
-    ggtitle("Disabling events within 25 km, 2017-2019"))
+    ggtitle("Loitering events, 2016-2020"))
 
-ggsave(disabplot, filename = 'output/figures/disabling_events.png', 
+ggsave(loitplot, filename = 'output/figures/loitering_events.png', 
        height = 4, width = 4, dpi = 900, units = 'in')
+
+
+loit <- as.data.frame(loit) %>% dplyr::select(-`.`) %>% as_tibble()
+
+##Table: year, loitering events
+yeardf <- group_by(loit, year) %>% 
+    summarise(loitering_events = n()) %>% 
+    ungroup() %>% 
+    mutate(year = as.character(year))
+
+#Add Total row (and 2016, since none that year)
+yeardf <- bind_rows(
+  data.frame(year = "2016", loitering_events = 0),
+  yeardf,
+  data.frame(year = "Total", loitering_events = nrow(loit))
+  ) 
+
+names(yeardf) <- c("Year", "Loitering events")
+
+(yeartab <- flextable(yeardf) %>% 
+    theme_booktabs() %>%
+    set_caption(caption = "Table 7: Loitering events by year") %>% 
+    align(align = "center", part = "all") %>% 
+    flextable::hline(i = 5, j = 1:2) %>% 
+    autofit()
+)
+
+save_as_docx(yeartab, path = 'output/tables/loitering_year.docx')
+
+
+#Cannot make table by gear because all gears are carrier
+
+##Table: flag, loitering events
+flagdf <- group_by(loit, vessel.flag) %>% 
+  summarise(loitering_events = n()) %>% 
+  ungroup() %>% 
+  rename(flag = vessel.flag) %>% 
+  mutate(flag = as.character(flag))
+
+#Replace iso3 code with countryname
+flagdf$flag <- countrycode(flagdf$flag, origin = 'iso3c', destination = 'country.name')
+
+flagdf <- arrange(flagdf, desc(loitering_events))
+
+#Add Total row
+flagdf <- bind_rows(
+  flagdf,
+  data.frame(flag = "Total", loitering_events = nrow(loit))
+) 
+
+names(flagdf) <- c("Flag", "Loitering events")
+
+(flagtab <- flextable(flagdf) %>% 
+    theme_booktabs() %>%
+    set_caption(caption = "Table 8: Loitering events by flag") %>% 
+    align(align = "center", part = "all") %>% 
+    flextable::hline(i = 7, j = 1:2) %>% 
+    autofit()
+)
+
+save_as_docx(flagtab, path = 'output/tables/loitering_flag.docx')
