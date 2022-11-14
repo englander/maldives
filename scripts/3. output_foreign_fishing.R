@@ -111,4 +111,8 @@ yeardf$`Fishing hours` <- formNum(yeardf$`Fishing hours`, 0)
   set_caption(caption = "Table 1: Foreign fishing by year")
 )
 
-save_as_docx(yeartab, path = 'output/data/foreign_year.docx')
+save_as_docx(yeartab, path = 'output/tables/foreign_year.docx')
+
+
+
+## Table by gear
