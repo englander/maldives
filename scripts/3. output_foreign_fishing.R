@@ -15,7 +15,8 @@ myThemeStuff <-
 
 set_flextable_defaults(font.family = "Calibri (Body)", 
                        font.size = "12", 
-                       text.align = 'left')
+                       text.align = 'left', 
+                       theme_fun = 'theme_vanilla')
 
 formNum <- function(num, dig){
   
@@ -108,7 +109,8 @@ yeardf$`Fishing-kW hours` <- formNum(yeardf$`Fishing-kW hours`, 0)
 yeardf$`Fishing hours` <- formNum(yeardf$`Fishing hours`, 0)
 
 (yeartab <- flextable(yeardf) %>% 
-  set_caption(caption = "Table 1: Foreign fishing by year")
+  set_caption(caption = "Table 1: Foreign fishing by year") %>% 
+    align(align = "center", part = "all")
 )
 
 save_as_docx(yeartab, path = 'output/tables/foreign_year.docx')
