@@ -195,3 +195,40 @@ filter(vesselinfo, mmsi %in% domves)
 #455388000 is BAHARI NUSANTARA 3
 
 filter(fishing_p1_df, mmsi %in% domves) %>% as.data.frame()
+
+
+#Also calculate fishing hours and AIS hours each year so can better understand trend 
+#in fishing inside Maldives EEZ
+single_date_anywhere_p1 <- function(mydate){
+  
+  #Read fishing effort csv for this date
+  df <- read_csv(paste0(
+    "data/mmsi-daily-csvs-10-v2/mmsi-daily-csvs-10-v2-", 
+    substring(mydate, 1, 4),"/",mydate)
+  ) %>% 
+    #Join on engine power onto effort
+    left_join(dplyr::select(vesselinfo, mmsi, engine_power_kw_gfw), by = 'mmsi') %>% 
+    mutate(fishing_kw_hours = fishing_hours * engine_power_kw_gfw) %>%
+    summarise(hours = sum(hours, na.rm = TRUE), 
+              fishing_hours = sum(fishing_hours, na.rm = TRUE),
+              fishing_kw_hours = sum(fishing_kw_hours, na.rm = TRUE)) %>% 
+    #Add date as column
+    mutate(date = substring(mydate, 1, 10) %>% as.Date())
+  
+  return(df)
+}
+  
+plan(multisession, workers = 10)
+
+fishing_anywhere_p1_list <- future_map(flist, function(x){
+  try(single_date_anywhere_p1(x))
+})
+
+fishing_anywhere_p1_df <- bind_rows(fishing_anywhere_p1_list) %>% 
+  mutate(year = year(date)) %>% 
+  group_by(year) %>% 
+  summarise(hours = sum(hours, na.rm = TRUE), 
+            fishing_hours = sum(fishing_hours, na.rm = TRUE),
+            fishing_kw_hours = sum(fishing_kw_hours, na.rm = TRUE))
+
+save(fishing_anywhere_p1_df, file = 'output/data/fishing_anywhere_p1_df.Rdata')
