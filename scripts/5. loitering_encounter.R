@@ -74,9 +74,12 @@ loit <- mutate(loit, start = as.Date(start), end = as.Date(end)) %>%
   filter(year >= 2016 & year <= 2020)
 
 (loitplot <- ggplot() + 
-    geom_sf(data = eez, fill = NA, size = 0.25) + 
+    geom_sf(data = atollrim, fill = NA) + 
+    geom_sf(data = eez, fill = NA) + 
     geom_sf(data = land, fill = 'grey60', col = 'grey60') + 
-    geom_sf(data = loit, col = 'darkorange1', alpha = 0.5) + 
+    geom_sf(data = loit, aes(col = loitering.loitering_hours), alpha = 0.5) + 
+    scale_color_viridis("Loitering\nhours", trans='log', breaks = c(1.1, 3, 7, 20, 55), 
+                        labels = as.character(c(1, 3, 7, 20, 55))) + 
     myThemeStuff + 
     ggtitle("Loitering events, 2016-2020"))
 
@@ -88,24 +91,30 @@ loit <- as.data.frame(loit) %>% dplyr::select(-`.`) %>% as_tibble()
 
 ##Table: year, loitering events
 yeardf <- group_by(loit, year) %>% 
-    summarise(loitering_events = n()) %>% 
-    ungroup() %>% 
-    mutate(year = as.character(year))
+  summarise(loitering_events = n(),
+            loitering_hours = sum(loitering.loitering_hours)) %>% 
+  ungroup() %>% 
+  mutate(year = as.character(year))
 
 #Add Total row (and 2016, since none that year)
 yeardf <- bind_rows(
-  data.frame(year = "2016", loitering_events = 0),
+  data.frame(year = "2016", loitering_events = 0, loitering_hours = 0),
   yeardf,
-  data.frame(year = "Total", loitering_events = nrow(loit))
-  ) 
+  data.frame(year = "Total", loitering_events = nrow(loit), 
+             loitering_hours = sum(loit$loitering.loitering_hours))
+) 
 
-names(yeardf) <- c("Year", "Loitering events")
+yeardf$loitering_hours <- sapply(yeardf$loitering_hours, function(x){
+  formNum(x, 1)
+})
+
+names(yeardf) <- c("Year", "Loitering events", "Loitering hours")
 
 (yeartab <- flextable(yeardf) %>% 
     theme_booktabs() %>%
-    set_caption(caption = "Table 9: Loitering events by year") %>% 
+    set_caption(caption = "Table 7: Loitering events by year") %>% 
     align(align = "center", part = "all") %>% 
-    flextable::hline(i = 5, j = 1:2) %>% 
+    flextable::hline(i = 5, j = 1:3) %>% 
     autofit()
 )
 
@@ -116,7 +125,8 @@ save_as_docx(yeartab, path = 'output/tables/loitering_year.docx')
 
 ##Table: flag, loitering events
 flagdf <- group_by(loit, vessel.flag) %>% 
-  summarise(loitering_events = n()) %>% 
+  summarise(loitering_events = n(), 
+            loitering_hours = sum(loitering.loitering_hours)) %>% 
   ungroup() %>% 
   rename(flag = vessel.flag) %>% 
   mutate(flag = as.character(flag))
@@ -129,16 +139,22 @@ flagdf <- arrange(flagdf, desc(loitering_events))
 #Add Total row
 flagdf <- bind_rows(
   flagdf,
-  data.frame(flag = "Total", loitering_events = nrow(loit))
-) 
+  data.frame(flag = "Total", loitering_events = nrow(loit), 
+             loitering_hours = sum(loit$loitering.loitering_hours))
+)
 
-names(flagdf) <- c("Flag", "Loitering events")
+
+flagdf$loitering_hours <- sapply(flagdf$loitering_hours, function(x){
+  formNum(x, 1)
+})
+
+names(flagdf) <- c("Flag", "Loitering events", "Loitering hours")
 
 (flagtab <- flextable(flagdf) %>% 
     theme_booktabs() %>%
-    set_caption(caption = "Table 10: Loitering events by flag") %>% 
+    set_caption(caption = "Table 8: Loitering events by flag") %>% 
     align(align = "center", part = "all") %>% 
-    flextable::hline(i = 7, j = 1:2) %>% 
+    flextable::hline(i = 7, j = 1:3) %>% 
     autofit()
 )
 
