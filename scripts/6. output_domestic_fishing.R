@@ -70,8 +70,7 @@ plotdf <- filter(fishing_p1_df, flag_gfw == "MDV") %>%
   myThemeStuff + 
   scale_fill_viridis("Fishing-kW\nhours",trans='log',
                       breaks = c(150, 1000, 20000), labels = c("150", "1,000", "20,000")) +
-  xlab("") + ylab("") + 
-    ggtitle("Apparent domestic fishing, 2016-2020")
+  xlab("") + ylab("")
 )
 
 ggsave(domesticplot, filename = 'output/figures/domestic_fishingkwhours.png', 

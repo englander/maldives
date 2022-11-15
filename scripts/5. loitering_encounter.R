@@ -80,8 +80,7 @@ loit <- mutate(loit, start = as.Date(start), end = as.Date(end)) %>%
     geom_sf(data = loit, aes(col = loitering.loitering_hours), alpha = 0.5) + 
     scale_color_viridis("Loitering\nhours", trans='log', breaks = c(1.1, 3, 7, 20, 55), 
                         labels = as.character(c(1, 3, 7, 20, 55))) + 
-    myThemeStuff + 
-    ggtitle("Loitering events, 2016-2020"))
+    myThemeStuff)
 
 ggsave(loitplot, filename = 'output/figures/loitering_events.png', 
        height = 4, width = 4, dpi = 900, units = 'in')
@@ -112,7 +111,7 @@ names(yeardf) <- c("Year", "Loitering events", "Loitering hours")
 
 (yeartab <- flextable(yeardf) %>% 
     theme_booktabs() %>%
-    set_caption(caption = "Table 7: Loitering events by year") %>% 
+    set_caption(caption = "Table 9: Loitering events by year") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 5, j = 1:3) %>% 
     autofit()
@@ -152,7 +151,7 @@ names(flagdf) <- c("Flag", "Loitering events", "Loitering hours")
 
 (flagtab <- flextable(flagdf) %>% 
     theme_booktabs() %>%
-    set_caption(caption = "Table 8: Loitering events by flag") %>% 
+    set_caption(caption = "Table 10: Loitering events by flag") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 7, j = 1:3) %>% 
     autofit()

@@ -68,8 +68,7 @@ plotdf <- filter(fishing_p1_df, flag_gfw != "MDV") %>%
   myThemeStuff + 
   scale_fill_viridis("Fishing-kW\nhours",trans='log', 
                       breaks = c(50, 1000, 20000), labels = c("50", "1,000", "20,000")) + 
-  xlab("") + ylab("") + 
-    ggtitle("Apparent foreign fishing, 2016-2020")
+  xlab("") + ylab("")
 )
 
 ggsave(foreignplot, filename = 'output/figures/foreign_fishingkwhours.png', 

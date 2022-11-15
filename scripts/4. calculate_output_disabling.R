@@ -105,8 +105,7 @@ togdisab$type <- relevel(togdisab$type, ref = "Start")
     geom_sf(data = land, fill = 'grey60', col = 'grey60') + 
   geom_sf(data = togdisab, aes(col = type), alpha = 0.35) + 
   scale_color_manual("Event", values = c("dodgerblue2", "darkorange1")) + 
-  myThemeStuff + 
-  ggtitle("Suspected disabling events, 2017-2019"))
+  myThemeStuff)
 
 ggsave(disabplot, filename = 'output/figures/disabling_events.png', 
        height = 4, width = 4, dpi = 900, units = 'in')
