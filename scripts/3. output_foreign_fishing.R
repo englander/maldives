@@ -117,6 +117,8 @@ yeardf$`Fishing hours` <- formNum(yeardf$`Fishing hours`, 0)
   set_caption(caption = "Table 1: Apparent foreign fishing by year") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 5, j = 1:4) %>%
+    add_footer_row(values = "Note: In 2016, fishing-kW hours and fishing vessels are zero while fishing hours is not because the first two variables come from data with a .1 degree resolution while fishing hours data have a resolution of .01 degrees.",
+                   colwidths = 4) %>%
     autofit()
 )
 
@@ -178,6 +180,8 @@ geardf$`Fishing hours` <- formNum(geardf$`Fishing hours`, 0)
     set_caption(caption = "Table 2: Apparent foreign fishing by gear") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 11, j = 1:4) %>% 
+    add_footer_row(values = "Note: In the tuna purse seine row, fishing-kW hours and fishing vessels are zero while fishing hours is not because the first two variables come from data with a .1 degree resolution while fishing hours data have a resolution of .01 degrees.",
+                   colwidths = 4) %>%
     autofit()
 )
 
@@ -211,7 +215,9 @@ flagdf <- left_join(
 
 #.268 hours of Spanish fishing likely just from one vessel; that vessel must have been missing
 #identifying information so it was excluded from .1 degree level data
-flagdf$n[flagdf$flag == "ESP"] <- 1
+#Since missing identifying information, and fishing hours also zero for Spain, 
+#drop Spain from table
+flagdf <- filter(flagdf, flag != "ESP")
 
 #Arrange by fishing kw hours
 flagdf <- arrange(flagdf, desc(fishing_kw_hours))
@@ -229,13 +235,11 @@ names(flagdf) <- c("Flag", "Fishing-kW hours", "Fishing hours", "Fishing vessels
 flagdf$`Fishing-kW hours` <- formNum(flagdf$`Fishing-kW hours`, 0)
 flagdf$`Fishing hours` <- formNum(flagdf$`Fishing hours`, 0)
 
-flagdf$`Fishing-kW hours`[flagdf$Flag == "Spain"] <- ""
-
 (flagtab <- flextable(flagdf) %>% 
     theme_booktabs() %>%
     set_caption(caption = "Table 3: Apparent foreign fishing by flag") %>% 
     align(align = "center", part = "all") %>% 
-    flextable::hline(i = 6, j = 1:4) %>% 
+    flextable::hline(i = 5, j = 1:4) %>% 
     autofit()
 )
 
