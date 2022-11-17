@@ -156,6 +156,8 @@ yeardf$`Hours lost` <- paste0(formNum(yeardf$`Hours lost`, 1), "%")
     set_caption(caption = "Table 6: Suspected disabling events by year") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 3, j = 1:4) %>% 
+    add_footer_row(values = "Notes: This table includes suspected disabling events that begin within 25 km of the Maldives' Exclusive Economic Zone boundary. Gap hours refers to the time elapsed between the beginning and end of suspected disabling events. Hours lost is gap hours relative to the time vessels spend with their transponders on.",
+                   colwidths = 4) %>%
     autofit()
 )
 
@@ -203,11 +205,15 @@ geardf$`Hours lost`[!is.nan(geardf$`Hours lost`)] <- paste0(formNum(geardf$`Hour
 
 geardf$`Hours lost`[geardf$`Hours lost` == "NaN"] <- ""
 
+geardf$Gear[geardf$Gear == "Fishing"] <- "Other fishing"
+
 (geartab <- flextable(geardf) %>% 
     theme_booktabs() %>%
     set_caption(caption = "Table 7: Suspected disabling events by gear") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 10, j = 1:4) %>% 
+    add_footer_row(values = "Notes: This table includes suspected disabling events that begin between 2017 and 2019 within 25 km of the Maldives' Exclusive Economic Zone (EEZ) boundary. Gap hours refers to the time elapsed between the beginning and end of suspected disabling events. Hours lost is gap hours relative to the time vessels spend with their transponders on. Other fishing refers to instances when Global Fishing Watch predicts a vessel is a fishing vessel, but cannot predict a vessel's specific fishing method (gear). Hours lost is blank for the pole and line and pots and traps rows because there are no vessels observed with this gear inside the Maldives' EEZ in Global Fishing Watch data.",
+                   colwidths = 4) %>%
     autofit()
 )
 
@@ -266,6 +272,8 @@ flagdf$Flag[is.na(flagdf$Flag)] <- "Missing"
     set_caption(caption = "Table 8: Suspected disabling events by flag") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 6, j = 1:4) %>% 
+    add_footer_row(values = "Notes: This table includes suspected disabling events that begin between 2017 and 2019 within 25 km of the Maldives' Exclusive Economic Zone boundary. Gap hours refers to the time elapsed between the beginning and end of suspected disabling events. Hours lost is gap hours relative to the time vessels spend with their transponders on. Hours lost is blank for the row in which flag is missing because Global Fishing Watch removes these observations from the data this report uses to calculate time vessels spend with their transponders on.",
+                   colwidths = 4) %>%
     autofit()
 )
 
