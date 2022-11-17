@@ -158,6 +158,8 @@ geardf$n[geardf$gear == 'pole_and_line'] <- 0
 geardf <- mutate(geardf, gear = str_replace_all(gear, "_", " ") %>% 
                    str_to_sentence())
 
+geardf$gear[geardf$gear == "Fishing"] <- "Other fishing"
+
 #Arrange by fishing kw hours
 geardf <- arrange(geardf, desc(fishing_kw_hours))
 
@@ -180,7 +182,7 @@ geardf$`Fishing hours` <- formNum(geardf$`Fishing hours`, 0)
     set_caption(caption = "Table 2: Apparent unauthorized foreign fishing by gear") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 11, j = 1:4) %>% 
-    add_footer_row(values = "Note: In the tuna purse seine row, fishing-kW hours and fishing vessels are zero while fishing hours is not because the first two variables come from data with a .1 degree resolution while fishing hours data have a resolution of .01 degrees.",
+    add_footer_row(values = "Notes: In the tuna purse seine row, fishing-kW hours and fishing vessels are zero while fishing hours is not because the first two variables come from data with a .1 degree resolution while fishing hours data have a resolution of .01 degrees. Other fishing refers to instances when Global Fishing Watch predicts a vessel is a fishing vessel, but cannot predict a vessel's specific fishing method (gear).",
                    colwidths = 4) %>%
     autofit()
 )
