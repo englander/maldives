@@ -117,7 +117,7 @@ yeardf$`Fishing hours` <- formNum(yeardf$`Fishing hours`, 0)
 
 (yeartab <- flextable(yeardf) %>% 
     theme_booktabs() %>%
-  set_caption(caption = "Table 4: Apparent domestic fishing by year") %>% 
+  set_caption(caption = "Table 4: Apparent unauthorized domestic fishing by year") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 5, j = 1:4) %>%
     autofit()
@@ -171,9 +171,11 @@ geardf$`Fishing hours` <- formNum(geardf$`Fishing hours`, 0)
 
 (geartab <- flextable(geardf) %>% 
     theme_booktabs() %>%
-    set_caption(caption = "Table 5: Apparent domestic fishing by gear") %>% 
+    set_caption(caption = "Table 5: Apparent unauthorized domestic fishing by gear") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 2, j = 1:4) %>% 
+    add_footer_row(values = "Note: Other fishing refers to instances when Global Fishing Watch predicts a vessel is a fishing vessel, but cannot predict a vessel's specific fishing method (gear).",
+                   colwidths = 4) %>%
     autofit()
 )
 
