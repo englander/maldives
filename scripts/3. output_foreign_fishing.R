@@ -114,7 +114,7 @@ yeardf$`Fishing hours` <- formNum(yeardf$`Fishing hours`, 0)
 
 (yeartab <- flextable(yeardf) %>% 
     theme_booktabs() %>%
-  set_caption(caption = "Table 1: Apparent foreign fishing by year") %>% 
+  set_caption(caption = "Table 1: Apparent unauthorized foreign fishing by year") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 5, j = 1:4) %>%
     add_footer_row(values = "Note: In 2016, fishing-kW hours and fishing vessels are zero while fishing hours is not because the first two variables come from data with a .1 degree resolution while fishing hours data have a resolution of .01 degrees.",
@@ -177,7 +177,7 @@ geardf$`Fishing hours` <- formNum(geardf$`Fishing hours`, 0)
 
 (geartab <- flextable(geardf) %>% 
     theme_booktabs() %>%
-    set_caption(caption = "Table 2: Apparent foreign fishing by gear") %>% 
+    set_caption(caption = "Table 2: Apparent unauthorized foreign fishing by gear") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 11, j = 1:4) %>% 
     add_footer_row(values = "Note: In the tuna purse seine row, fishing-kW hours and fishing vessels are zero while fishing hours is not because the first two variables come from data with a .1 degree resolution while fishing hours data have a resolution of .01 degrees.",
@@ -237,7 +237,7 @@ flagdf$`Fishing hours` <- formNum(flagdf$`Fishing hours`, 0)
 
 (flagtab <- flextable(flagdf) %>% 
     theme_booktabs() %>%
-    set_caption(caption = "Table 3: Apparent foreign fishing by flag") %>% 
+    set_caption(caption = "Table 3: Apparent unauthorized foreign fishing by flag") %>% 
     align(align = "center", part = "all") %>% 
     flextable::hline(i = 5, j = 1:4) %>% 
     autofit()
