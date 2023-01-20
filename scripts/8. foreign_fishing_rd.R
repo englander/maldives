@@ -2,7 +2,8 @@
 rm(list = ls())
 
 pacman::p_load('dplyr', 'collapse', 'lubridate', 'ggplot2', 'sf', 'readr',
-               'purrr', 'furrr', 'countrycode', 'tidyr', 'rworldmap')
+               'purrr', 'furrr', 'countrycode', 'tidyr', 'rworldmap', 
+               'fixest', 'viridis')
 
 myThemeStuff <- 
   theme(panel.background = element_rect(fill=NA),
@@ -122,9 +123,6 @@ inside <- st_intersects(eez, cell_locs)
 outside <- cell_locs[-inside[[1]],]
 
 inside <- cell_locs[inside[[1]],]
-
-##THIS IS WHERE I AM
-#From 1, if inside pt is inside convex hull of land area, just remove its distance
 
 #Land area of Maldives
 land <- getMap(resolution = 'high')
@@ -257,3 +255,44 @@ rddf <- filter(rddf, abs(dist_bin_mid) > 1)
 
 ggsave(rdplot, filename = 'output/figures/foreign_fishing_rd.png', 
        height = 4, width = 6.5, dpi = 900, units = 'in')
+
+#Difference in intercepts: Report in text but no table for now
+feols(fishing_hours ~ dist_bin_mid*location, data = rddf, se = 'hetero') %>% summary()
+# OLS estimation, Dep. Var.: fishing_hours
+# Observations: 98 
+# Standard-errors: Heteroskedasticity-robust 
+# Estimate Std. Error  t value  Pr(>|t|)    
+# (Intercept)                  509.2814   31.06998  16.3914 < 2.2e-16 ***
+#   dist_bin_mid                 -21.0594    1.23970 -16.9875 < 2.2e-16 ***
+#   locationinside              -380.3762   36.56461 -10.4029 < 2.2e-16 ***
+#   dist_bin_mid:locationinside   18.3362    1.36606  13.4227 < 2.2e-16 ***
+#   ---
+#   Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+# RMSE: 81.7   Adj. R2: 0.976689
+
+##Finally plot fishing hours within 50 km of Maldives EEZ
+
+#Created in 1. read_shapes.R
+load("output/data/maldives_eez_notprojected.Rdata")
+load('output/data/maldives_land_projected.Rdata')
+
+land <- st_transform(land, crs = st_crs(eez))
+
+#Sum over years, gears, and flags
+plotdf <- group_by(buf_50_foreign_fishing_hours, cell_ll_lat, cell_ll_lon) %>% 
+  summarise(fishing_hours = sum(fishing_hours)) %>% ungroup()
+
+foreignplot <- ggplot() + 
+    geom_sf(data = land, fill = 'grey60', col = 'grey60') + 
+    geom_tile(data = plotdf, aes(y = cell_ll_lat, x = cell_ll_lon, fill = fishing_hours),
+              width = .01, height = .01) + 
+    geom_sf(data = eez, fill = NA) + 
+        myThemeStuff + 
+    scale_fill_viridis("Fishing\nhours",trans='log', 
+                       breaks = c(.05,3, 30), labels = c("0.05","3","30")) + 
+    xlab("") + ylab("")
+
+  
+#Make sure to note in text this figure is .01 resolution, while others are .1 degree resolution
+ggsave(foreignplot, filename = 'output/figures/foreign_fishing_within_50km.png', 
+       height = 4, width = 4, dpi = 900, units = 'in')
