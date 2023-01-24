@@ -5,7 +5,7 @@ rm(list = ls())
 
 pacman::p_load('dplyr', 'collapse', 'lubridate', 'ggplot2', 'sf', 'readr',
                'purrr', 'furrr', 'countrycode', 'tidyr', 'flextable', 'viridis',
-               'stringr', 'rworldmap')
+               'stringr', 'rworldmap', 'fixest')
 
 myThemeStuff <- 
   theme(panel.background = element_rect(fill=NA),
@@ -63,13 +63,13 @@ disab <- st_multipoint(x = cbind(disab$gap_start_lon, disab$gap_start_lat)) %>%
 #Created in 1. read_shapes.R
 load('output/data/maldives_eez_projected.Rdata')
 
-#25 km buffer
-eez <- st_buffer(eez, dist = 25*1000)
+#50 km buffer
+eez <- st_buffer(eez, dist = 50*1000)
 
 #Project into lat lon to match disab
 eez <- st_transform(eez, st_crs(disab))
 
-#Which gap events start within 25 km of EEZ?
+#Which gap events start within 50 km of EEZ?
 inter <- st_intersects(eez, disab)
 
 disab <- disab[inter[[1]],]
@@ -88,7 +88,7 @@ enddisab <- st_multipoint(x = cbind(enddisab$gap_end_lon, enddisab$gap_end_lat))
   st_cast("POINT") %>% 
   st_sf(enddisab)
 
-#Which gap events end within 25 km of EEZ?
+#Which gap events end within 50 km of EEZ?
 inter <- st_intersects(buf, enddisab)
 
 enddisab <- enddisab[inter[[1]],]
@@ -169,7 +169,7 @@ cell_locs <- bind_rows(
 
 #Compare number of disabling events and gap hours for events that
 #begin or end within 10 km vs 10-20 km away from boundary
-comparedf <- as.data.frame(cell_locs) %>% dplyr::select(-.)
+comparedf <- cell_locs 
 
 #Drop events farther than 20 km
 comparedf <- filter(comparedf, dist_km <= 20)
@@ -179,7 +179,8 @@ comparedf <- mutate(comparedf, within10 = if_else(dist_km <= 10, 1, 0))
 
 #more events begin and end within 10 km vs within 10-20 km. 
 #but in terms of gap hours similar (start) or less (end)
-group_by(comparedf, type, within10) %>% 
+as.data.frame(comparedf) %>% dplyr::select(-.) %>% 
+  group_by(type, within10) %>% 
   summarise(n(), gaphours = sum(gap_hours))
 # type  within10 `n()` gaphours
 # <chr>    <dbl> <int>    <dbl>
@@ -187,3 +188,100 @@ group_by(comparedf, type, within10) %>%
 # 2 End          1    42    1485.
 # 3 Start        0    30    1372.
 # 4 Start        1    40    1465.
+
+
+#Also make RD plot for number of disabling events even though doesn't really
+#make sense. where gap begins
+#Only want cells within 50 km of boundary
+rddf <- filter(cell_locs, type == "Start" & 
+                      dist_km <= 50)
+
+#Cut distance into 1 km widths
+rddf$dist_bin <- cut(rddf$dist_km, 
+                            breaks = seq(from = 0, to = 50, by = 1))
+
+#Sum fishing hours dist bin by (inside or outside)
+rddf <- group_by(rddf, location, dist_bin) %>%
+  summarise(begin_gap_events = n()) %>% ungroup() 
+
+#Record midpoint of each bin
+middf <- distinct(rddf, dist_bin) %>% 
+  mutate(dist_bin_num = dist_bin)
+middf$dist_bin_num <- as.character(middf$dist_bin_num)
+middf$dist_bin_num <- gsub("\\(", "", middf$dist_bin_num)
+middf$dist_bin_num <- gsub("\\]", "", middf$dist_bin_num)
+middf$dist_bin_num <- gsub(",.*","",middf$dist_bin_num)
+middf <- mutate(middf, dist_bin_num = as.numeric(dist_bin_num) + 0.5)
+
+#Join onto rddf
+rddf <- left_join(rddf, rename(middf, dist_bin_mid = dist_bin_num), 
+                  by = 'dist_bin')
+
+#if outside, make distance negative
+rddf <- mutate(rddf, dist_bin_mid = if_else(location == "outside",
+                                            -dist_bin_mid, dist_bin_mid))
+
+#if missing events, add zero rows
+rddf <- bind_rows(rddf, 
+                  data.frame(location = 'inside', dist_bin_mid = seq(from = 0.5, to = 49.5, by = 1),
+                             begin_gap_events = 0)
+)
+
+#Can similarly add zero rows for outside distance bins in case any missing
+rddf <- bind_rows(rddf, 
+                  data.frame(location = 'outside', dist_bin_mid = seq(to = -0.5, from = -49.5, by = 1),
+                             begin_gap_events = 0)
+)
+
+rddf$location <- as.factor(rddf$location)
+
+
+#Sum again to dist_bin (get rid of zero rows for which there was already positive fishing hours)
+rddf <- group_by(rddf, dist_bin_mid, location) %>% 
+  summarise(begin_gap_events = sum(begin_gap_events)) %>% 
+  ungroup()
+
+#Save
+save(rddf, file = 'output/data/begin_gap_events_rddf.Rdata')
+
+
+ggplot(data = rddf, aes(x = dist_bin_mid, y = begin_gap_events, col = location)) + 
+  geom_point() + 
+  geom_smooth(method = 'lm', se = FALSE)
+
+rddf$location <- relevel(rddf$location, ref = "outside")
+
+#Drop cells closest to boundary since many of them partially overlap it
+#due to resolution of data
+rddf <- filter(rddf, abs(dist_bin_mid) > 1)
+
+#Output cross-sectional result (summed over years), in levels
+(rdplot <- 
+    ggplot(data = rddf, aes(x = dist_bin_mid, y = begin_gap_events, col = location)) + 
+    geom_point(alpha = 0.4) + 
+    geom_smooth(method = 'lm', se = FALSE) + 
+    ylab("Number of suspected disabling events\n") + 
+    xlab("\n Distance to Maldives' EEZ boundary (km)") + 
+    myThemeStuff + 
+    theme(legend.position = c(0.8, 0.8)) + 
+    geom_vline(xintercept=0, color = "red") + 
+    scale_color_manual("", values = c("dodgerblue2", "darkorange1"), 
+                       labels = c("Outside", "Inside")))
+
+
+ggsave(rdplot, filename = 'output/figures/begin_gap_events_rd.png', 
+       height = 4, width = 6.5, dpi = 900, units = 'in')
+
+#Difference in intercepts: Report in text but no table for now
+feols(begin_gap_events ~ dist_bin_mid*location, data = rddf, se = 'hetero') %>% summary()
+# OLS estimation, Dep. Var.: begin_gap_events
+# Observations: 98 
+# Standard-errors: Heteroskedasticity-robust 
+# Estimate Std. Error   t value   Pr(>|t|)    
+# (Intercept)                  2.598265   0.366838  7.082872 2.5447e-10 ***
+#   dist_bin_mid                 0.002653   0.013639  0.194515 8.4619e-01    
+# locationinside              -1.517143   0.531957 -2.852001 5.3417e-03 ** 
+#   dist_bin_mid:locationinside -0.032245   0.017604 -1.831653 7.0170e-02 .  
+# ---
+#   Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+# RMSE: 1.23854   Adj. R2: 0.44199
