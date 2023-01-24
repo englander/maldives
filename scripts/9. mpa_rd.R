@@ -1,7 +1,8 @@
 rm(list = ls())
 
 pacman::p_load('dplyr', 'collapse', 'lubridate', 'ggplot2', 'sf', 'readr',
-               'purrr', 'furrr', 'countrycode', 'tidyr')
+               'purrr', 'furrr', 'countrycode', 'tidyr', 'fixest', 
+               'viridis')
 
 myThemeStuff <- 
   theme(panel.background = element_rect(fill=NA),
@@ -88,6 +89,9 @@ fishing_mpa <- bind_rows(fishing_p01_list)
 
 save(fishing_mpa, file = 'output/data/fishing_p01_obs_50_km_of_mpa.Rdata')
 
+#Filter to positive fishing hours observations
+fishing_mpa <- filter(fishing_mpa, fishing_hours > 0)
+
 #Now calculate distance of each grid cell to MPA boundary
 #Already know that no fishing inside MPAs from 7. mpa.R
 #Recover initial mpa shapefiles
@@ -104,6 +108,9 @@ cell_locs <- st_multipoint(x = cbind(cell_locs$cell_ll_lon, cell_locs$cell_ll_la
 
 #Calculate distance 
 outside_dist <- st_distance(cell_locs, mpa)
+
+#Minimum distance to an MPA
+outside_dist <- apply(outside_dist, 1, min)
 
 cell_locs <- mutate(cell_locs, dist_km = as.numeric(outside_dist)) %>% 
   mutate(dist_km = dist_km / 1000)
@@ -122,10 +129,9 @@ fishing_mpa <- filter(fishing_mpa,
 fishing_mpa$dist_bin <- cut(fishing_mpa$dist_km, 
                                              breaks = seq(from = 0, to = 50, by = 1))
 
-#Sum fishing hours to year by dist bin by (inside or outside)
-rddf <- group_by(fishing_mpa, year, location, dist_bin) %>%
-  summarise(fishing_hours = sum(fishing_hours)) %>% ungroup() %>%
-  mutate(log_fishing_hours = log(fishing_hours))
+#Sum fishing hours dist bin by (inside or outside)
+rddf <- group_by(fishing_mpa, location, dist_bin) %>%
+  summarise(fishing_hours = sum(fishing_hours)) %>% ungroup() 
 
 #Record midpoint of each bin
 middf <- distinct(rddf, dist_bin) %>% 
@@ -152,14 +158,14 @@ rddf <- bind_rows(rddf,
 
 #Can similarly add zero rows for outside distance bins in case any missing
 rddf <- bind_rows(rddf, 
-                  data.frame(location = 'outside', dist_bin_mid = seq(from = -0.5, to = -49.5, by = 1),
+                  data.frame(location = 'outside', dist_bin_mid = seq(to = -0.5, from = -49.5, by = 1),
                              fishing_hours = 0)
                   )
 
 rddf$location <- as.factor(rddf$location)
 
 
-#Sum over years
+#Sum again to dist_bin (get rid of zero rows for which there was already positive fishing hours)
 rddf <- group_by(rddf, dist_bin_mid, location) %>% 
   summarise(fishing_hours = sum(fishing_hours)) %>% 
   ungroup() #can't do logs because no fishing inside MPAs
@@ -197,31 +203,71 @@ ggsave(rdplot, filename = 'output/figures/mpa_rd.png',
 
 #Difference in intercepts: Report in text but no table for now
 feols(fishing_hours ~ dist_bin_mid*location, data = rddf, se = 'hetero') %>% summary()
-
+# OLS estimation, Dep. Var.: fishing_hours
+# Observations: 98 
+# Standard-errors: Heteroskedasticity-robust 
+# Estimate Std. Error   t value Pr(>|t|) 
+# (Intercept)                  0.956488   0.810041  1.180790  0.24067 
+# dist_bin_mid                 0.006477   0.025285  0.256158  0.79839 
+# locationinside              -0.956488   0.810041 -1.180790  0.24067 
+# dist_bin_mid:locationinside -0.006477   0.025285 -0.256158  0.79839 
+# ---
+#   Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+# RMSE: 1.59937   Adj. R2: 0.029096
 
 ##Finally plot fishing hours within 50 km of MPAs
+
+#Re-create mpa buffers
+mpa <- st_read("data/Protected_Areas_of_Maldives(EPA_V2/Protected_Areas_of_Maldives(EPA_V2.shp")
 
 #Created in 1. read_shapes.R
 load("output/data/maldives_eez_notprojected.Rdata")
 load('output/data/maldives_land_projected.Rdata')
 
+mpa_buffer <- st_transform(mpa, crs = st_crs(land))
+
+mpa_buffer <- st_buffer(mpa_buffer, dist = 50*1000)
+
+#Then unproject everything
 land <- st_transform(land, crs = st_crs(eez))
+mpa_buffer <- st_transform(mpa_buffer, crs = st_crs(eez))
+mpa <- st_transform(mpa, crs = st_crs(eez))
+
+#Only plot mpas and islands within bounding box of fishing observations
+cell_locs <- st_transform(cell_locs, crs = st_crs(eez))
+
+fishingbox <- st_bbox(cell_locs)
+
+#expand bbox 1 degree in each direction
+fishingbox[c("xmin", "ymin")] <- fishingbox[c("xmin", "ymin")] - 1
+
+fishingbox[c("xmax", "ymax")] <- fishingbox[c("xmax", "ymax")] + 1
+
+
+#crop 
+mpa <- st_crop(mpa, fishingbox)
+
+land <- st_crop(land, fishingbox)
 
 #Sum over years, gears, and flags
-plotdf <- group_by(buf_50_foreign_fishing_hours, cell_ll_lat, cell_ll_lon) %>% 
+plotdf <- group_by(fishing_mpa, cell_ll_lat, cell_ll_lon) %>% 
   summarise(fishing_hours = sum(fishing_hours)) %>% ungroup()
 
-foreignplot <- ggplot() + 
+(mpaplot <- ggplot() + 
   geom_sf(data = land, fill = 'grey60', col = 'grey60') + 
   geom_tile(data = plotdf, aes(y = cell_ll_lat, x = cell_ll_lon, fill = fishing_hours),
-            width = .01, height = .01) + 
-  geom_sf(data = eez, fill = NA) + 
+            width = .05, height = .05) + 
+    geom_sf(data = mpa, fill = 'red', col = NA) + 
+  #geom_sf(data = eez, fill = NA) + 
   myThemeStuff + 
-  scale_fill_viridis("Fishing\nhours",trans='log', 
-                     breaks = c(.05,3, 30), labels = c("0.05","3","30")) + 
-  xlab("") + ylab("")
-
+  scale_fill_viridis("Fishing\nhours") + #,trans='log', 
+                     #breaks = c(.05,3, 30), labels = c("0.05","3","30")) + 
+  ylab("") + scale_x_continuous("", breaks = c(72, 74)) + 
+    coord_sf(xlim = c(fishingbox["xmin"],fishingbox["xmax"]), expand = FALSE)
+)
 
 #Make sure to note in text this figure is .01 resolution, while others are .1 degree resolution
-ggsave(foreignplot, filename = 'output/figures/foreign_fishing_within_50km.png', 
+ggsave(mpaplot, filename = 'output/figures/mpa_fishing_within_50km.png', 
        height = 4, width = 4, dpi = 900, units = 'in')
+
+#made grid cells larger so that they are visible
