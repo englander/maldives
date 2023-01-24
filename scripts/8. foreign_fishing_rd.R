@@ -225,6 +225,9 @@ rddf <- group_by(rddf, dist_bin_mid, location) %>%
   summarise(fishing_hours = sum(fishing_hours)) %>% 
   ungroup() %>% mutate(log_fishing_hours = log(fishing_hours))
 
+#Save
+save(rddf, file = 'output/data/foreign_fishing_rddf.Rdata')
+
 ggplot(data = rddf, aes(x = dist_bin_mid, y = log_fishing_hours, col = location)) + 
   geom_point() + 
   geom_smooth(method = 'lm', se = FALSE)
